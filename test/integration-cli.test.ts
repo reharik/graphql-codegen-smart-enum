@@ -1,0 +1,48 @@
+import { describe, expect, it } from "vitest";
+import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const runCodegen = (): void => {
+  execSync("npm run build", {
+    cwd: process.cwd(),
+    stdio: "pipe",
+  });
+
+  execSync("npx graphql-codegen --config examples/codegen.ts", {
+    cwd: process.cwd(),
+    stdio: "pipe",
+  });
+};
+
+describe("Codegen CLI integration", () => {
+  describe("When using local built plugin from codegen.ts", () => {
+    it("should generate smart enum and typescript files", () => {
+      // arrange
+      const smartEnumsOutputPath = resolve(
+        process.cwd(),
+        "examples/generated/graphql-smart-enums.ts",
+      );
+      const typesOutputPath = resolve(
+        process.cwd(),
+        "examples/generated/graphql-types.ts",
+      );
+
+      // act
+      runCodegen();
+
+      // assert
+      expect(existsSync(smartEnumsOutputPath)).toBe(true);
+      expect(existsSync(typesOutputPath)).toBe(true);
+
+      const smartEnumsOutput = readFileSync(smartEnumsOutputPath, "utf8");
+      expect(smartEnumsOutput).toContain(
+        "export const PaymentStatus = enumeration<typeof paymentStatusInput>('PaymentStatus'",
+      );
+      expect(smartEnumsOutput).toContain("type Enumeration");
+      expect(smartEnumsOutput).toContain(
+        "'canceled': { display: 'Payment was canceled', deprecated: true, deprecationReason: 'Use VOIDED' },",
+      );
+    });
+  });
+});

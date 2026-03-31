@@ -1,0 +1,41 @@
+{
+  "name": "@reharik/graphql-codegen-smart-enum",
+  "version": "0.1.0",
+  "description": "GraphQL Code Generator plugin for SmartEnum generation from schema enums",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "test": "vitest run",
+    "test:integration": "npm run build && graphql-codegen --config examples/codegen.ts",
+    "typecheck": "tsc --noEmit",
+    "publish:npm": "npm run build && npm publish --access public"
+  },
+  "peerDependencies": {
+    "graphql": "^16.0.0"
+  },
+  "dependencies": {
+    "@graphql-codegen/plugin-helpers": "^5.1.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@types/node": "^22.14.1",
+    "graphql": "^16.11.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
