@@ -108,11 +108,17 @@ If camelCasing causes collisions within a GraphQL enum, generation fails with a 
 You can define enum-value metadata directly in your schema using `@enumMeta` on `ENUM_VALUE`:
 
 ```graphql
+input EnumMetaPropInput {
+  name: String!
+  value: String!
+}
+
 directive @enumMeta(
   display: String
   shortDisplay: String
   description: String
   sortOrder: Int
+  props: [EnumMetaPropInput!]
 ) on ENUM_VALUE
 
 enum ClaimStatus {
@@ -122,6 +128,8 @@ enum ClaimStatus {
 }
 ```
 
+`props` is a list of `{ name, value }` string pairs. The plugin flattens each pair onto the generated member object: `name` becomes a JavaScript property name (quoted if it is not a valid identifier) and `value` becomes a string literal. If the same `name` appears more than once in `props`, the last entry wins. Use this for extra, typed ad hoc fields (for example a SQL `column` name for `orderBy`).
+
 The plugin reads this schema-authored metadata and emits it into generated SmartEnum input entries.
 Fallback behavior per enum value:
 
@@ -129,3 +137,4 @@ Fallback behavior per enum value:
 - `description`: `@enumMeta(description)` -> enum value description -> omitted
 - `shortDisplay`: `@enumMeta(shortDisplay)` -> omitted
 - `sortOrder`: `@enumMeta(sortOrder)` -> omitted
+- `props`: each `{ name, value }` is emitted as a field on the member object; if `@enumMeta` has no other fields but `props` is non-empty, the directive is still applied (object input, derived `display` as above)

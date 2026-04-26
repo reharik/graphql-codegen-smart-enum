@@ -18,19 +18,29 @@ export interface SmartEnumPluginConfig {
 const DEFAULT_ENUM_CLASS_SUFFIX = "";
 const ENUM_META_DIRECTIVE_NAME = "enumMeta";
 
-type ParsedEnumValueMeta = {
-  display?: string;
-  shortDisplay?: string;
-  description?: string;
-  sortOrder?: number;
-};
-
 const escapeString = (value: string): string => {
   return value
     .replace(/\\/g, "\\\\")
     .replace(/'/g, "\\'")
     .replace(/\r/g, "\\r")
     .replace(/\n/g, "\\n");
+};
+
+type ParsedEnumValueMeta = {
+  display?: string;
+  shortDisplay?: string;
+  description?: string;
+  sortOrder?: number;
+  /** Key/value pairs from `@enumMeta(props: ...)`; later entries win on duplicate `name`. */
+  props?: readonly { name: string; value: string }[];
+};
+
+const isValidJsIdentifier = (name: string): boolean => {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name);
+};
+
+const formatObjectFieldKey = (name: string): string => {
+  return isValidJsIdentifier(name) ? name : `'${escapeString(name)}'`;
 };
 
 const toLowerCamelCase = (value: string): string => {
@@ -108,6 +118,37 @@ const parseIntDirectiveArg = (
   return Number.isNaN(parsed) ? undefined : parsed;
 };
 
+const parseEnumMetaProps = (
+  directive: DirectiveNode,
+): readonly { name: string; value: string }[] | undefined => {
+  const argValue = directive.arguments?.find(
+    (argument) => argument.name.value === "props",
+  )?.value;
+
+  if (argValue?.kind !== Kind.LIST) {
+    return undefined;
+  }
+
+  const result: { name: string; value: string }[] = [];
+
+  for (const item of argValue.values) {
+    if (item.kind !== Kind.OBJECT) {
+      continue;
+    }
+
+    const nameNode = item.fields.find((f) => f.name.value === "name")?.value;
+    const valueNode = item.fields.find((f) => f.name.value === "value")?.value;
+
+    if (nameNode?.kind !== Kind.STRING || valueNode?.kind !== Kind.STRING) {
+      continue;
+    }
+
+    result.push({ name: nameNode.value, value: valueNode.value });
+  }
+
+  return result.length > 0 ? result : undefined;
+};
+
 const parseEnumMetaDirective = (
   enumValue: GraphQLEnumValue,
 ): ParsedEnumValueMeta | undefined => {
@@ -116,18 +157,21 @@ const parseEnumMetaDirective = (
     return undefined;
   }
 
+  const props = parseEnumMetaProps(enumMetaDirective);
   const parsedMeta: ParsedEnumValueMeta = {
     display: parseStringDirectiveArg(enumMetaDirective, "display"),
     shortDisplay: parseStringDirectiveArg(enumMetaDirective, "shortDisplay"),
     description: parseStringDirectiveArg(enumMetaDirective, "description"),
     sortOrder: parseIntDirectiveArg(enumMetaDirective, "sortOrder"),
+    ...(typeof props !== "undefined" ? { props } : {}),
   };
 
   if (
     typeof parsedMeta.display === "undefined" &&
     typeof parsedMeta.shortDisplay === "undefined" &&
     typeof parsedMeta.description === "undefined" &&
-    typeof parsedMeta.sortOrder === "undefined"
+    typeof parsedMeta.sortOrder === "undefined" &&
+    (typeof props === "undefined" || props.length === 0)
   ) {
     return undefined;
   }
@@ -396,6 +440,18 @@ const buildInput = (
 
           if (typeof parsedMeta?.sortOrder === "number") {
             objectFields.push(`sortOrder: ${parsedMeta.sortOrder}`);
+          }
+
+          if (typeof parsedMeta?.props !== "undefined") {
+            const propByName = new Map<string, string>();
+            for (const { name, value } of parsedMeta.props) {
+              propByName.set(name, value);
+            }
+            for (const [propName, propValue] of propByName) {
+              objectFields.push(
+                `${formatObjectFieldKey(propName)}: ${quoteLiteral(propValue)}`,
+              );
+            }
           }
 
           if (typeof enumValue.deprecationReason === "string") {

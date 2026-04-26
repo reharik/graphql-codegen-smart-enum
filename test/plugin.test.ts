@@ -214,6 +214,73 @@ describe("SmartEnum plugin", () => {
         "const claimStatusInput = { 'open': { display: 'Open' }, 'inReview': { display: 'Review queue', shortDisplay: 'Review', description: 'Review queue' }, 'closed': { display: 'Closed' }, 'archived': { display: 'Archived' } } as const;",
       );
     });
+
+    it("should emit object input and props when enum value has only @enumMeta(props: ...)", async () => {
+      // arrange
+      const schemaWithPropsOnly = `
+        input EnumMetaPropInput {
+          name: String!
+          value: String!
+        }
+
+        directive @enumMeta(
+          display: String
+          shortDisplay: String
+          description: String
+          sortOrder: Int
+          props: [EnumMetaPropInput!]
+        ) on ENUM_VALUE
+
+        enum OrderField {
+          CREATED_AT
+            @enumMeta(
+              props: [{ name: "column", value: "created_at" }, { name: "dir", value: "asc" }]
+            )
+        }
+      `;
+
+      // act
+      const normalized = await generateFromSchemaText(schemaWithPropsOnly);
+
+      // assert
+      expect(normalized).toContain(
+        "const orderFieldInput = { 'createdAt': { display: 'Created At', column: 'created_at', dir: 'asc' } } as const;",
+      );
+    });
+
+    it("should emit display and props together when @enumMeta sets both", async () => {
+      // arrange
+      const schemaWithPropsAndDisplay = `
+        input EnumMetaPropInput {
+          name: String!
+          value: String!
+        }
+
+        directive @enumMeta(
+          display: String
+          shortDisplay: String
+          description: String
+          sortOrder: Int
+          props: [EnumMetaPropInput!]
+        ) on ENUM_VALUE
+
+        enum OrderField {
+          CREATED_AT
+            @enumMeta(
+              display: "Created"
+              props: [{ name: "column", value: "created_at" }]
+            )
+        }
+      `;
+
+      // act
+      const normalized = await generateFromSchemaText(schemaWithPropsAndDisplay);
+
+      // assert
+      expect(normalized).toContain(
+        "const orderFieldInput = { 'createdAt': { display: 'Created', column: 'created_at' } } as const;",
+      );
+    });
   });
 
   describe("When config is invalid", () => {

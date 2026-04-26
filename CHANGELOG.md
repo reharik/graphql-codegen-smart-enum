@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-04-26
+
 ### Added
+
+- **`@enumMeta(props: …)`** — the plugin parses `props: [EnumMetaPropInput!]` (each entry `{ name, value }` as strings) and emits each pair as a string field on the generated smart-enum member. An enum value that only sets `props` (no `display` / `shortDisplay` / `description` / `sortOrder`) is still treated as having `@enumMeta`, so object input and metadata are generated (including `display` fallbacks as for other `enumMeta` values).
+
+## [0.2.3] and earlier
 
 - **`skipEnums` config** — optional `string[]` of GraphQL enum type names to omit from the generated file. Use when certain schema enums should be handled only by the TypeScript plugin (or outside this plugin).
 
