@@ -228,6 +228,58 @@ describe("SmartEnum plugin", () => {
         /Config `enumClassSuffix` must be a string/,
       );
     });
+
+    it("should fail with a clear error when skipEnums is not an array", () => {
+      // arrange
+      const invalidConfig = JSON.parse('{"skipEnums":"PaymentStatus"}');
+      const callPlugin = () => plugin(schema, [], invalidConfig);
+
+      // act + assert
+      expect(callPlugin).toThrowError(
+        /Config `skipEnums` must be an array of strings/,
+      );
+    });
+
+    it("should fail with a clear error when skipEnums contains a non-string", () => {
+      // arrange
+      const invalidConfig = JSON.parse('{"skipEnums":["PaymentStatus",1]}');
+      const callPlugin = () => plugin(schema, [], invalidConfig);
+
+      // act + assert
+      expect(callPlugin).toThrowError(
+        /Config `skipEnums` must contain only string/,
+      );
+    });
+  });
+
+  describe("When skipEnums lists schema enums", () => {
+    it("should omit listed enums from generated output", async () => {
+      // arrange
+      const output = plugin(schema, [], {
+        skipEnums: ["PaymentStatus"],
+      });
+
+      // act
+      const normalized = await normalizeOutput(output);
+
+      // assert
+      expect(normalized).not.toContain("PaymentStatus");
+      expect(normalized).not.toContain("paymentStatusInput");
+      expect(normalized).toContain("const sortDirectionInput");
+    });
+
+    it("should return empty output when all enums are skipped", async () => {
+      // arrange
+      const output = plugin(schema, [], {
+        skipEnums: ["PaymentStatus", "SortDirection"],
+      });
+
+      // act
+      const normalized = await normalizeOutput(output);
+
+      // assert
+      expect(normalized).toBe("");
+    });
   });
 
   describe("When enum value camelCase names collide", () => {

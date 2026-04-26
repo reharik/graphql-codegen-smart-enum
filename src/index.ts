@@ -11,6 +11,8 @@ import {
 export interface SmartEnumPluginConfig {
   enumClassSuffix?: string;
   emitDescriptionsAsDisplay?: boolean;
+  /** GraphQL enum type names to exclude from generated output. */
+  skipEnums?: string[];
 }
 
 const DEFAULT_ENUM_CLASS_SUFFIX = "";
@@ -193,6 +195,18 @@ const getEnumTypes = (schema: GraphQLSchema): readonly GraphQLEnumType[] => {
     .sort((left, right) => left.name.localeCompare(right.name));
 };
 
+const filterSkippedEnumTypes = (
+  enumTypes: readonly GraphQLEnumType[],
+  skipEnums: string[] | undefined,
+): readonly GraphQLEnumType[] => {
+  if (typeof skipEnums === "undefined" || skipEnums.length === 0) {
+    return enumTypes;
+  }
+
+  const skip = new Set(skipEnums);
+  return enumTypes.filter((enumType) => !skip.has(enumType.name));
+};
+
 const validateConfig = (config: SmartEnumPluginConfig): void => {
   if (
     typeof config.enumClassSuffix !== "undefined" &&
@@ -210,6 +224,22 @@ const validateConfig = (config: SmartEnumPluginConfig): void => {
     throw new Error(
       "[graphql-codegen-smart-enum] Config `emitDescriptionsAsDisplay` must be a boolean when provided.",
     );
+  }
+
+  if (typeof config.skipEnums !== "undefined") {
+    if (!Array.isArray(config.skipEnums)) {
+      throw new Error(
+        "[graphql-codegen-smart-enum] Config `skipEnums` must be an array of strings when provided.",
+      );
+    }
+
+    for (const name of config.skipEnums) {
+      if (typeof name !== "string") {
+        throw new Error(
+          "[graphql-codegen-smart-enum] Config `skipEnums` must contain only string enum type names.",
+        );
+      }
+    }
   }
 };
 
@@ -274,7 +304,10 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
   const enumClassSuffix = config.enumClassSuffix ?? DEFAULT_ENUM_CLASS_SUFFIX;
   const emitDescriptionsAsDisplay = config.emitDescriptionsAsDisplay ?? true;
 
-  const enumTypes = getEnumTypes(schema);
+  const enumTypes = filterSkippedEnumTypes(
+    getEnumTypes(schema),
+    config.skipEnums,
+  );
 
   if (enumTypes.length === 0) {
     return "";
@@ -300,7 +333,7 @@ export const plugin: PluginFunction<SmartEnumPluginConfig> = (
     " * -----------------------------------------------------------------------------",
     " */",
     "",
-    "import { enumeration, type Enumeration } from 'smart-enums';",
+    "import { enumeration, type Enumeration } from '@reharik/smart-enum';",
     "",
     ...inputLines,
     "",

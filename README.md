@@ -2,6 +2,8 @@
 
 GraphQL Code Generator plugin that inspects schema enums and emits SmartEnum definitions.
 
+Version history: [CHANGELOG.md](./CHANGELOG.md) (also published on npm next to this README).
+
 ## Goals
 
 - Generate SmartEnum code for GraphQL enums only.
@@ -11,8 +13,11 @@ GraphQL Code Generator plugin that inspects schema enums and emits SmartEnum def
 ## Install
 
 ```bash
+npm i @reharik/smart-enum
 npm i -D @reharik/graphql-codegen-smart-enum @graphql-codegen/cli @graphql-codegen/typescript graphql
 ```
+
+Generated files import `@reharik/smart-enum` at runtime, so install it as a regular dependency (not only dev).
 
 ## Config
 
@@ -20,11 +25,13 @@ npm i -D @reharik/graphql-codegen-smart-enum @graphql-codegen/cli @graphql-codeg
 export type SmartEnumPluginConfig = {
   enumClassSuffix?: string;
   emitDescriptionsAsDisplay?: boolean;
+  skipEnums?: string[];
 };
 ```
 
 - `enumClassSuffix` (default: empty): optional suffix appended to generated enum symbol names.
 - `emitDescriptionsAsDisplay` (default: `true`): when true, enums with descriptions emit object input with `{ display }` metadata.
+- `skipEnums` (optional): GraphQL enum type names to exclude from this plugin’s output (names match the type in the schema, e.g. `PaymentStatus`). Unknown names are ignored.
 
 ## Usage (`codegen.ts`)
 
@@ -79,7 +86,7 @@ generates:
 ## Generated shape
 
 ```ts
-import { enumeration, type Enumeration } from "smart-enums";
+import { enumeration, type Enumeration } from "@reharik/smart-enum";
 
 const paymentStatusInput = {
   pending: { display: "Waiting for payment" },

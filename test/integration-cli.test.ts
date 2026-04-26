@@ -37,6 +37,9 @@ describe("Codegen CLI integration", () => {
 
       const smartEnumsOutput = readFileSync(smartEnumsOutputPath, "utf8");
       expect(smartEnumsOutput).toContain(
+        "import { enumeration, type Enumeration } from '@reharik/smart-enum';",
+      );
+      expect(smartEnumsOutput).toContain(
         "export const PaymentStatus = enumeration<typeof paymentStatusInput>('PaymentStatus'",
       );
       expect(smartEnumsOutput).toContain("type Enumeration");
